@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_compass/flutter_compass.dart';
@@ -6,6 +8,10 @@ import 'dart:math' as math;
 import 'package:location/location.dart';
 
 void main() => runApp(MyApp());
+
+double _sigmaX = 5.0; // from 0-10
+double _sigmaY = 5.0; // from 0-10
+double _opacity = 0.1; // from 0-1.0
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -49,11 +55,13 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     });
 
-     Location().onLocationChanged().listen((LocationData currentLocation) {
-      if (_position[0].compareTo(currentLocation.latitude) != 0||
+    Location().onLocationChanged().listen((LocationData currentLocation) {
+      if (_position[0].compareTo(currentLocation.latitude) != 0 ||
           _position[1].compareTo(currentLocation.longitude) != 0) {
         setState(() {
-          print( "${{_position[1]}} ${{currentLocation.longitude}} ${{_position[1] != currentLocation.longitude}}");
+          print("${{_position[1]}} ${{currentLocation.longitude}} ${{
+            _position[1] != currentLocation.longitude
+          }}");
           _position[0] = currentLocation.latitude;
           _position[1] = currentLocation.longitude;
           doCalcul();
@@ -77,6 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
     var x = math.cos(lat1) * math.sin(lat2) -
         math.sin(lat1) * math.cos(lat2) * math.cos(lon2 - lon1);
     var brng = math.atan2(y, x) * 180 / math.pi;
+    // Passer de -180, + 180 a 0, 360
     var direction = (brng + 360) % 360;
 
     setState(() {
@@ -86,18 +95,21 @@ class _MyHomePageState extends State<MyHomePage> {
     // ------------- CALCUL DISTANCE d ------------------
 
     double R = 6371e3; // metres
-    double g1 = lat1 * math.pi / 180;
-    double g2 = lat2 * math.pi / 180;
-    var dg = (lat2 - lat1) * math.pi / 180;
-    var dl = (lon2 - lon1) * math.pi / 180;
+    double g1 = lat1 ;
+    double g2 = lat2;
+    var dg = (lat2 - lat1) ;
+    var dl = (lon2 - lon1);
     var a = math.sin(dg / 2) * math.sin(dg / 2) +
         math.cos(g1) * math.cos(g2) * math.sin(dl / 2) * math.sin(dl / 2);
     var c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
 
     var _distanceRes = R * c;
+    print(_distanceRes);
+    print(lat1);
+    print(lon1);
 
     setState(() {
-      _distance = _distanceRes.floor();
+      _distance = (_distanceRes/1000).floor();
     });
   }
 
@@ -108,40 +120,59 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-
- SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-      ]);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
 
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Where is LMB'),
-        ),
-        body: Container(
-          padding: EdgeInsets.all(16.0),
-          alignment: AlignmentDirectional.topCenter,
-          child: Column(
-            children: <Widget>[
-              Text("$_direction"),
-               Text("$_phonedirection"),
-              Text("lat : ${{_position[0]}}, long : ${{_position[1]}}"),
-              Text("Vous etes à $_distance km du Mont Blanc"),
-              MaterialButton(
-                child: Text("Find"),
-                color: Colors.green,
-                onPressed: () => doCalcul(),
-              ),
-              Transform.rotate(
-                angle: (_phonedirection) * math.pi / 180,
-                child: Icon(
-                  Icons.arrow_upward,
-                  color: Colors.black,
-                  size: 150,
+       
+        body: Stack(
+          children: <Widget>[
+            Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage("assets/images/mtbl.png"),
+                  fit: BoxFit.cover,
                 ),
               ),
-            ],
-          ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: _sigmaX, sigmaY: _sigmaY),
+                child: Container(
+                  padding: EdgeInsets.all(16.0),
+                  alignment: AlignmentDirectional.topCenter,
+                  child: Column(
+                    children: <Widget>[
+                      Expanded(
+                        child: Transform.rotate(
+                          angle: (360 - _phonedirection + _direction) %
+                              360 *
+                              math.pi /
+                              180,
+                          child: Image.asset(
+                            "assets/images/arrow.png",
+                          ),
+                        ),
+                      ),
+                      Text("Vous etes à $_distance km du Mont Blanc", style: TextStyle(color: Colors.white),),
+                      // Row(
+                      //   children: <Widget>[
+                      //     Text("$_direction"),
+                      //     Text("$_phonedirection"),
+                      //     Text("lat : ${{_position[0]}}, long : ${{
+                      //       _position[1]
+                      //     }}"),
+                      //     Text("${{
+                      //       (360 - _phonedirection + _direction) % 360
+                      //     }}"),
+                      //   ],
+                      // )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
