@@ -151,6 +151,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               180,
                           child: Image.asset(
                             "assets/images/arrow.png",
+                            width: MediaQuery.of(context).size.width,
                           ),
                         ),
                       ),
